@@ -2,6 +2,42 @@
 
 All notable changes to the autoresearch project are documented here.
 
+## v2.1.1 — Hook System (2026-05-22)
+
+**Theme:** Safety, context injection, and session notifications.
+
+### Added
+- **9-hook safety system** — fires on every Claude Code session
+  - `scout-block`: blocks node_modules/, .git/, __pycache__/ and other context-wasting directories (PreToolUse)
+  - `privacy-block`: blocks .env, SSH keys, credentials with APPROVED: prefix override (PreToolUse)
+  - `dangerous-cmd-block`: blocks force-push, rm -rf, git reset --hard (PreToolUse, regular git push allowed)
+  - `iteration-context`: injects recent TSV data every 5th prompt after compaction (UserPromptSubmit)
+  - `subagent-context`: gives spawned subagents ~150 tokens of loop awareness (SubagentStart)
+  - `dev-rules-reminder`: re-injects plan path and code standards after compaction (UserPromptSubmit)
+  - `simplify-gate`: warns at 400 LOC, blocks at 800 LOC when shipping verbs detected (UserPromptSubmit)
+  - `session-init`: computes project root, branch, paths; persists session state (SessionStart)
+  - `stop-notify`: terminal notification + optional webhook on session end (SessionEnd)
+- **hooks.json** — auto-registers all hooks on plugin install
+- **node-hook-runner.sh** — shell wrapper that silences profile noise for clean JSON output
+- **lib/ar-hook-utils.cjs** — shared utilities (state management, TSV reading, logging)
+- **lib/ignore.cjs** — vendored gitignore-spec pattern matcher (15KB, zero deps)
+- **.ckignore** — baseline blocked patterns (gitignore syntax, customizable per project)
+- **guide/hooks.md** — complete hook reference guide
+
+### Changed
+- `plugin.json` version bumped to 2.1.1
+- `scripts/transform.sh` now copies hooks to `claude-plugin/hooks/`
+- `.gitignore` updated with `!.claude/hooks/autoresearch/` exclusion
+- `docs/system-architecture.md` updated with hook system architecture
+- `CONTRIBUTING.md` updated with hook development guide
+
+### Design Decisions
+- SessionEnd event (not Stop) for notifications — Stop fires per-turn, SessionEnd fires once
+- Force-push only blocking — regular `git push` allowed for `/autoresearch:ship` compatibility
+- Smart Bash argument parsing — prevents false positives on string literals
+- Session state via `/tmp/ar-session-{hash}.json` — hooks are subprocesses, can't share env vars
+- Iteration-based throttling (every 5th) — matches loop cadence, not wall-clock time
+
 ## v2.1.0 — 2026-05-22
 
 ### Summary

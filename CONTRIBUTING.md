@@ -166,3 +166,49 @@ Contributors don't need to bump versions.
 - **Discussion?** Tag [@uditgoenka](https://github.com/uditgoenka) in your PR
 
 Thanks for contributing!
+
+## Hook Development
+
+### Adding a New Hook
+
+1. Create `.claude/hooks/autoresearch/{name}.cjs`
+2. Use the shared library: `require('./lib/ar-hook-utils.cjs')`
+3. Follow the pattern:
+   ```js
+   'use strict';
+   const { isEnabled, safeParseStdin, log, block, allow, inject } = require('./lib/ar-hook-utils.cjs');
+   try {
+     if (!isEnabled('hook-name')) process.exit(0);
+     const stdin = safeParseStdin();
+     if (!stdin) process.exit(0);
+     // ... hook logic ...
+     process.exit(0);
+   } catch {
+     process.exit(0); // fail-open
+   }
+   ```
+4. Register in `hooks.json` under the correct event
+5. Run `bash scripts/transform.sh` to update the plugin distribution
+6. Run `bash tests/test-hooks.sh` to verify
+
+### Hook Rules
+
+- **Fail-open:** Always wrap in try/catch, always exit 0 on error
+- **No console.log:** Corrupts stdout JSON. Use `process.stderr.write()` for debug
+- **No external deps:** Pure Node.js builtins only (exception: vendored `lib/ignore.cjs`)
+- **Exit codes:** 0 = allow/inject, 2 = block. No other exit codes
+- **State:** Use `/tmp/ar-session-{hash}.json` via `loadSessionState()` / `saveSessionState()`
+
+### Testing Hooks
+
+```bash
+# Syntax check
+node --check .claude/hooks/autoresearch/my-hook.cjs
+
+# Manual test
+echo '{"tool_name":"Read","tool_input":{"file_path":"test.txt"}}' | node .claude/hooks/autoresearch/my-hook.cjs
+echo "Exit code: $?"
+
+# Full test suite
+bash tests/test-hooks.sh
+```

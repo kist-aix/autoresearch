@@ -105,6 +105,12 @@ flowchart TD
         ├── predict-personas.md            # 5 default expert personas
         ├── reason-judge-protocol.md       # Blind judge scoring protocol
         └── security-checklist.md          # STRIDE + OWASP checklist
+├── hooks/autoresearch/                    # Hook system (NEW in v2.1.1)
+│   ├── hooks.json                         # Auto-registration
+│   ├── node-hook-runner.sh                # Shell wrapper
+│   ├── .ckignore                          # Baseline blocked patterns
+│   ├── lib/                               # Shared modules
+│   └── [9 hook .cjs files]
 
 .opencode/                                 # OpenCode distribution (underscore naming)
 plugins/autoresearch/                      # Codex distribution
@@ -114,9 +120,63 @@ scripts/
 └── install.sh                            # Guided installer
 
 claude-plugin/
-└── .claude-plugin/plugin.json            # Claude Code metadata — v2.1.0
+├── .claude-plugin/plugin.json            # Claude Code metadata — v2.1.1
+└── hooks/                                # Hook system (NEW in v2.1.1)
 plugins/autoresearch/
 └── .codex-plugin/plugin.json             # Codex metadata — v2.1.0-codex.0
+```
+
+## Hook System Architecture
+
+v2.1.1 adds a 9-hook safety and context injection system. Hooks ship as part of the Claude Code plugin via `hooks/hooks.json` and auto-register on install.
+
+### Hook Lifecycle
+
+```mermaid
+graph LR
+    subgraph "Safety Gates — PreToolUse"
+        SB[scout-block]
+        PB[privacy-block]
+        DCB[dangerous-cmd-block]
+    end
+
+    subgraph "Context Injection"
+        IC[iteration-context<br/>UserPromptSubmit]
+        SC[subagent-context<br/>SubagentStart]
+        DRR[dev-rules-reminder<br/>UserPromptSubmit]
+    end
+
+    subgraph "Quality + Notifications"
+        SG[simplify-gate<br/>UserPromptSubmit]
+        SI[session-init<br/>SessionStart]
+        SN[stop-notify<br/>SessionEnd]
+    end
+
+    SI -->|creates| STATE["/tmp/ar-session-{hash}.json"]
+    IC -->|reads/writes| STATE
+    SC -->|reads| STATE
+    DRR -->|reads| STATE
+    SN -->|reads + cleans| STATE
+```
+
+### State Management
+
+Hooks share state via `/tmp/ar-session-{hash}.json` (hash = md5 of cwd + session_id). Created by `session-init` on SessionStart, consumed by context injection hooks, cleaned up by `stop-notify` on SessionEnd.
+
+### Plugin Distribution
+
+```
+claude-plugin/
+├── .claude-plugin/plugin.json    # v2.1.1
+├── hooks/                        # NEW — auto-registers via hooks.json
+│   ├── hooks.json
+│   ├── node-hook-runner.sh
+│   ├── lib/
+│   │   ├── ar-hook-utils.cjs
+│   │   └── ignore.cjs
+│   └── [9 hook files]
+├── commands/                     # unchanged
+├── skills/                       # unchanged
 ```
 
 ## Key Architectural Decisions
@@ -131,10 +191,14 @@ plugins/autoresearch/
 | TSV with `# metric_direction` comment | Enables evals command to auto-detect direction without user prompt |
 | 8 TSV status values | baseline, keep, discard, crash, no-op, hook-blocked, metric-error, keep (reworked) |
 | handoff.json for chain integration | Structured handoff between subcommands; evals reads `*-results.tsv` directly |
+| Hook system with fail-open design | Hooks never block Claude due to crashes; safety without fragility |
+| Session state via temp file | Hooks are subprocesses — can't share env vars. `/tmp/ar-session-{hash}.json` persists across hook calls |
+| Iteration-based throttling (every 5th) | Autoresearch is loop-driven; time-based throttling doesn't match iteration cadence |
 
 ## Integration Points
 
 - **Claude Code Plugin System** — commands in `.claude/commands/`, skill in `.claude/skills/`
+- **Claude Code Hook System** — 9 hooks auto-registered via `hooks/hooks.json` in plugin
 - **OpenCode** — `.opencode/commands/` + `.opencode/skills/` (underscore naming convention)
 - **Codex** — `plugins/autoresearch/` + `.agents/skills/autoresearch/`
 - **Git** — memory, rollback, staleness detection, changelog generation

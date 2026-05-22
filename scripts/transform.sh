@@ -170,9 +170,42 @@ YAML
   printf 'Codex: transformed %s → plugins/ + .agents/\n' ".claude/"
 }
 
+# --- Claude Plugin Hooks Transform ---
+
+transform_hooks() {
+  local src_hooks="$REPO_ROOT/.claude/hooks/autoresearch"
+  local dst_hooks="$REPO_ROOT/claude-plugin/hooks"
+
+  [[ -d "$src_hooks" ]] || { printf 'Hooks: no source at %s, skipping\n' "$src_hooks"; return; }
+
+  rm -rf "$dst_hooks"
+  mkdir -p "$dst_hooks/lib"
+
+  # Copy all hook files
+  for f in "$src_hooks"/*.cjs "$src_hooks"/*.sh "$src_hooks"/*.json; do
+    [[ -f "$f" ]] || continue
+    cp "$f" "$dst_hooks/$(basename "$f")"
+  done
+
+  # Copy .ckignore baseline
+  [[ -f "$src_hooks/.ckignore" ]] && cp "$src_hooks/.ckignore" "$dst_hooks/.ckignore"
+
+  # Copy lib directory
+  for f in "$src_hooks"/lib/*.cjs; do
+    [[ -f "$f" ]] || continue
+    cp "$f" "$dst_hooks/lib/$(basename "$f")"
+  done
+
+  # Ensure runner is executable
+  [[ -f "$dst_hooks/node-hook-runner.sh" ]] && chmod +x "$dst_hooks/node-hook-runner.sh"
+
+  printf 'Hooks: transformed %s → claude-plugin/hooks/\n' ".claude/hooks/autoresearch/"
+}
+
 # --- Main ---
 
 if [[ $DO_OPENCODE -eq 1 ]]; then transform_opencode; fi
 if [[ $DO_CODEX -eq 1 ]]; then transform_codex; fi
+transform_hooks
 
 printf 'Transform complete.\n'

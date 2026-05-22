@@ -4,7 +4,7 @@
 
 **By [Udit Goenka](https://udit.co)**
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/uditgoenka/autoresearch/releases)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)](https://github.com/uditgoenka/autoresearch/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </div>
@@ -44,6 +44,7 @@ npx skills add uditgoenka/autoresearch
 | [Chains & Combinations](chains-and-combinations.md) | Multi-command pipelines with all 12 commands |
 | [Examples by Domain](examples-by-domain.md) | Real-world examples: software, sales, marketing, DevOps, ML, HR |
 | [Advanced Patterns](advanced-patterns.md) | Guards, MCP, CI/CD, evals checkpoints, transform.sh |
+| [Hooks Reference](hooks.md) | 9 auto-firing hooks: safety gates, context injection, notifications |
 | **[Scenario Guides](scenario/)** | **Real-world scenario walkthroughs** |
 
 ---

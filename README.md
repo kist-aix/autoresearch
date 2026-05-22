@@ -9,7 +9,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 [![Claude Code Skill](https://img.shields.io/badge/Claude_Code-Skill-blue?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Skill-purple)](https://opencode.ai)
 [![Codex](https://img.shields.io/badge/Codex-Skill-green?logo=openai&logoColor=white)](https://developers.openai.com/codex)
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/uditgoenka/autoresearch/releases)
+[![Version](https://img.shields.io/badge/version-2.1.1-blue.svg)](https://github.com/uditgoenka/autoresearch/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 [![Based on](https://img.shields.io/badge/Based_on-Karpathy's_Autoresearch-orange)](https://github.com/karpathy/autoresearch)
@@ -22,7 +22,7 @@ Based on [Karpathy's autoresearch](https://github.com/karpathy/autoresearch) —
 
 *You don't need AGI. You need a goal, a metric, and a loop that never quits.*
 
-**Supports Claude Code, OpenCode, and OpenAI Codex. 12 commands. 95% fewer tokens per invocation.**
+**Supports Claude Code, OpenCode, and OpenAI Codex. 12 commands. 9 safety hooks. 95% fewer tokens per invocation.**
 
 <br>
 
@@ -102,6 +102,48 @@ Before looping, Claude performs a one-time setup:
 | 6 | **Simplicity wins** — equal results + less code = keep |
 | 7 | **Git is memory** — experiments committed with `experiment:` prefix; agent reads `git log` + `git diff` before each iteration |
 | 8 | **When stuck, think harder** — re-read, combine near-misses, try radical changes |
+
+---
+
+## Hooks & Safety
+
+v2.1.1 ships a 9-hook safety system that protects your sessions automatically. Hooks fire on every session — not just during autoresearch commands.
+
+### What's Protected
+
+| Hook | What it does | Event |
+|------|-------------|-------|
+| **scout-block** | Blocks node_modules/, .git/, __pycache__/, etc. from filling your context | PreToolUse |
+| **privacy-block** | Blocks .env, SSH keys, credentials from being read in sessions | PreToolUse |
+| **dangerous-cmd-block** | Blocks force-push, `rm -rf`, `git reset --hard` | PreToolUse |
+| **iteration-context** | Injects recent TSV iteration data after context compaction | UserPromptSubmit |
+| **subagent-context** | Gives subagents awareness of active loop state | SubagentStart |
+| **dev-rules-reminder** | Re-injects plan path and code standards after compaction | UserPromptSubmit |
+| **simplify-gate** | Warns at 400 LOC, blocks at 800 LOC before shipping | UserPromptSubmit |
+| **session-init** | Sets up project context at session start | SessionStart |
+| **stop-notify** | Terminal notification + optional webhook on session end | SessionEnd |
+
+### Configuration
+
+All hooks are **on by default**. Disable individually:
+
+```bash
+# Disable a specific hook
+export AR_DISABLE_SCOUT_BLOCK=1
+export AR_DISABLE_PRIVACY_BLOCK=1
+export AR_DISABLE_DANGEROUS_CMD_BLOCK=1
+# ... etc for each hook name
+```
+
+Optional webhook for session completion notifications:
+
+```bash
+export AR_NOTIFY_WEBHOOK=https://hooks.slack.com/services/...
+```
+
+Customize blocked directories with a `.ckignore` file (gitignore syntax) at your project root.
+
+See [guide/hooks.md](guide/hooks.md) for full reference.
 
 ---
 
